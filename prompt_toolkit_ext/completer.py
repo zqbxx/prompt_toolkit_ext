@@ -1,9 +1,110 @@
-from prompt_toolkit.completion import WordCompleter
+from prompt_toolkit.completion import WordCompleter, Completer
 from prompt_toolkit.document import Document
 from prompt_toolkit.completion import CompleteEvent
 from prompt_toolkit.completion import Completion
 from prompt_toolkit.formatted_text import HTML
 from typing import Callable, Dict, Iterable, List, Optional, Pattern, Union
+
+import csv
+from io import StringIO
+from prompt_toolkit_ext import PromptArgumentParser
+
+
+class ArgParserCompleter(Completer):
+
+    def __init__(
+        self,
+        parser: PromptArgumentParser,
+        ignore_case: bool = False,
+        match_middle: bool = False,
+    ) -> None:
+
+        self.parser = parser
+        self.ignore_case = ignore_case
+        self.match_middle = match_middle
+
+    def get_completions(
+        self, document: Document, complete_event: CompleteEvent
+    ) -> Iterable[Completion]:
+
+        parser = self.parser
+
+        word_before_cursor = document.get_word_before_cursor()
+        text = document.text_before_cursor.lstrip()
+
+        if self.ignore_case:
+            text = text.lower()
+
+        buff = StringIO(text)
+        reader = csv.reader(buff, delimiter=' ')
+        args = None
+        for line in reader:
+            args = line
+            break
+
+        if args is None or len(args) == 0:
+            return
+
+        def remove_parent_args(args, parser):
+            cur_cmd_pos = -1
+            cur_parser = parser
+            for i, arg in enumerate(args):
+                # 遍历命令行数组，找到最近一个parser
+                subparser = parser.get_subparser_by_command(arg, like=False)
+                if subparser is not None:
+                    cur_cmd_pos = i
+                    cur_parser = subparser
+                elif cur_cmd_pos == -1:
+                    return args, parser
+                else:
+                    if cur_cmd_pos == len(args) - 1:
+                        return [], cur_parser
+                    return args[(cur_cmd_pos + 1):], cur_parser
+            return args, parser
+
+        # 在当前命令有子命令的时候移除父命令，保留子命令
+        current_args, current_parser = remove_parent_args(args, parser)
+
+        if len(current_args) == 0:
+            return
+
+        command = current_args[0]
+
+        # 可能是命令
+        if len(current_args) == 1:
+            subparsers = current_parser.get_subparser_by_command(command, like=True)
+            if subparsers is not None:
+                for c, _ in subparsers.items():
+                    yield Completion(c, -len(word_before_cursor))
+
+        # 检查上一次值，如果为参数则提示输入值
+        cur_text = current_args[-1]
+        if len(current_args) > 1:
+            last_text = current_args[-2]
+            if last_text.startswith('-'):
+                yield Completion('<input option value>', -len(word_before_cursor))
+
+        # 获得已经使用过的参数，避免重复出现
+        exists_opts = []
+        for arg in current_args:
+            if arg.startswith('-'):
+                exists_opts.append(arg)
+
+        # TODO 判断路径，返回PathCompleter
+        # TODO 判断参数类型，显示提示
+
+        # 获取所有可用的参数
+        opt_groups = current_parser.get_parser_opts(cur_text)
+        for opt_group in opt_groups:
+            completions = []
+            for opt in opt_group:
+                if opt not in ['-h', '--help'] and opt not in exists_opts:
+                    completions.append(Completion(opt, -len(word_before_cursor)))
+                else:
+                    completions = []
+                    break
+            for c in completions:
+                yield c
 
 
 class PromptCompleter(WordCompleter):
