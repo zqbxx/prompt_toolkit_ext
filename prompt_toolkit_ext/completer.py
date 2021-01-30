@@ -3,11 +3,14 @@ from prompt_toolkit.document import Document
 from prompt_toolkit.completion import CompleteEvent
 from prompt_toolkit.completion import Completion
 from prompt_toolkit.formatted_text import HTML
+from prompt_toolkit.utils import get_cwidth
+
 from typing import Callable, Dict, Iterable, List, Optional, Pattern, Union
 
 import csv
 from io import StringIO
 from prompt_toolkit_ext import PromptArgumentParser
+from prompt_toolkit_ext.utils import fill_right
 
 
 class ArgParserCompleter(Completer):
@@ -75,14 +78,14 @@ class ArgParserCompleter(Completer):
             subparsers = current_parser.get_subparser_by_command(command, like=True)
             if subparsers is not None:
                 for c, _ in subparsers.items():
-                    yield Completion(c, -len(word_before_cursor))
+                    yield Completion(c, -len(word_before_cursor), style='fg:blue', selected_style="fg:white bg:blue")
 
         # 检查上一次值，如果为参数则提示输入值
         cur_text = current_args[-1]
         if len(current_args) > 1:
             last_text = current_args[-2]
             if last_text.startswith('-'):
-                yield Completion('<input option value>', -len(word_before_cursor))
+                yield Completion('', -len(word_before_cursor), '<input option value>')
 
         # 获得已经使用过的参数，避免重复出现
         exists_opts = []
@@ -95,16 +98,28 @@ class ArgParserCompleter(Completer):
 
         # 获取所有可用的参数
         opt_groups = current_parser.get_parser_opts(cur_text)
+        completions_dict = []
+        max_text_width = 0
         for opt_group in opt_groups:
-            completions = []
-            for opt in opt_group:
+
+            opt_strings = opt_group.get('opt_strings')
+            help_info = opt_group.get('help_info')
+            for opt in opt_strings:
                 if opt not in ['-h', '--help'] and opt not in exists_opts:
-                    completions.append(Completion(opt, -len(word_before_cursor)))
+                    text_width = get_cwidth(opt)
+                    if text_width > max_text_width:
+                        max_text_width = text_width
+                    completions_dict.append({'text': opt, 'display': help_info})
                 else:
-                    completions = []
                     break
-            for c in completions:
-                yield c
+
+        for c in completions_dict:
+            text = c.get('text')
+            display = fill_right(text, max_text_width) + ' ' + c.get('display')
+            yield Completion(text, -len(cur_text),
+                             display=display,
+                             style='fg:blue',
+                             selected_style="fg:white bg:blue")
 
 
 class PromptCompleter(WordCompleter):

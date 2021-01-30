@@ -67,17 +67,25 @@ class PromptArgumentParser(argparse.ArgumentParser):
 
     def get_parser_opts(self, opt):
         opt_list = []
+
+        def get(opts, h):
+            return {
+                "opt_strings": opts,
+                "help_info": h
+            }
+
         for action in self._actions:
             if isinstance(action, argparse.Action) and not isinstance(action, argparse._SubParsersAction):
                 opt_strings = action.option_strings
+                help_info = action.help
                 if opt in ['--', '-']:
-                    opt_list.append(opt_strings)
+                    opt_list.append(get(opt_strings, help_info))
                 else:
                     matched_opt_strings = []
                     for opt_str in opt_strings:
-                        if opt in opt_str:
+                        if opt_str.startswith(opt):
                             matched_opt_strings.append(opt_str)
-                    opt_list.append(matched_opt_strings)
+                    opt_list.append(get(matched_opt_strings, help_info))
 
         return opt_list
 
