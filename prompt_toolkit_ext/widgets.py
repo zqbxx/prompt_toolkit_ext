@@ -30,12 +30,18 @@ class RadioList(_RadioList):
         self.handlers.append(enter_handler)
 
     def _handle_enter(self) -> None:
-        old_value = self.current_value
-        new_value = self.values[self._selected_index][0]
+
+        old_value = None
+        for value in self.values:
+            if value[0] == self.current_value:
+                old_value = value
+
+        new_value = self.values[self._selected_index]
         for handler in self.handlers:
             ret = handler('enter', old_value, new_value)
             if not ret:
                 return
         super()._handle_enter()
+
         for handler in self.handlers:
-            handler('selected', old_value, self.current_value)
+            handler('selected', old_value, new_value)
