@@ -1,7 +1,14 @@
+from typing import Sequence, Tuple, List
+import qrcode
+
 from prompt_toolkit.widgets import RadioList as _RadioList
-from typing import Sequence, Tuple
 from prompt_toolkit.widgets.base import _T
-from prompt_toolkit.formatted_text import AnyFormattedText
+from prompt_toolkit.layout.controls import UIContent, UIControl
+from prompt_toolkit.formatted_text import (
+    AnyFormattedText,
+    StyleAndTextTuples,
+    to_formatted_text,
+)
 
 
 class RadioList(_RadioList):
@@ -45,3 +52,93 @@ class RadioList(_RadioList):
 
         for handler in self.handlers:
             handler('selected', old_value, new_value)
+
+
+'''
+@author: ‘wang_pc‘
+@site: 
+@software: PyCharm
+@file: qrcode_terminal.py
+@time: 2017/2/10 16:38
+@Update: 2018/2/6 21:58
+
+https://github.com/alishtory/qrcode-terminal/blob/master/qrcode_terminal/qrcode_terminal.py
+'''
+
+
+class BarCode(UIControl):
+
+    def __init__(self, text: str) -> None:
+        self._text = text
+        self._items = self._qr_terminal_str()
+
+    @property
+    def text(self):
+        return self._text
+
+    @text.setter
+    def text(self, text):
+        self._text = text
+        self._items = self._qr_terminal_str()
+
+    def create_content(self, width: int, height: int) -> UIContent:
+
+        def get_line(i: int) -> StyleAndTextTuples:
+            return self._items[i]
+
+        return UIContent(get_line=get_line, line_count=len(self._items), show_cursor=False)
+
+    def _qr_terminal_str(self, version=1) -> List[StyleAndTextTuples]:
+
+        white_block = '▇'
+        black_block = '  '
+
+        qr = qrcode.QRCode(version)
+        qr.add_data(self.text)
+        qr.make()
+
+        lines: List[StyleAndTextTuples] = []
+        text: StyleAndTextTuples = to_formatted_text(white_block*(qr.modules_count+2))
+        lines.append(text)
+        for mn in qr.modules:
+            output = white_block
+            for m in mn:
+                if m:
+                    output += black_block
+                else:
+                    output += white_block
+            output += white_block
+            text: StyleAndTextTuples = to_formatted_text(output)
+            lines.append(text)
+        text: StyleAndTextTuples = to_formatted_text(white_block*(qr.modules_count+2))
+        lines.append(text)
+        return lines
+
+
+if __name__ == '__main__':
+    from prompt_toolkit import Application
+    from prompt_toolkit.key_binding import KeyBindings
+    from prompt_toolkit import Application
+    from prompt_toolkit.buffer import Buffer
+    from prompt_toolkit.layout.containers import VSplit, Window
+    from prompt_toolkit.layout.controls import BufferControl
+    from prompt_toolkit.layout.layout import Layout
+
+    kb = KeyBindings()
+
+    @kb.add('c-q')
+    def exit_(event):
+        event.app.exit()
+
+    buffer1 = Buffer()  # Editable buffer.
+
+    root_container = VSplit([
+        Window(content=BufferControl(buffer=buffer1)),
+        Window(width=1, char='|'),
+        Window(content=BarCode('Hello world')),
+    ])
+
+    layout = Layout(root_container)
+
+    app = Application(layout=layout, key_bindings=kb, full_screen=True)
+    app.run()
