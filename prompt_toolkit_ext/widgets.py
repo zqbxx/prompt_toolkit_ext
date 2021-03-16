@@ -29,9 +29,27 @@ class RadioList(_RadioList):
     def get_selected_item(self) -> Tuple[_T, AnyFormattedText]:
         return self.values[self.get_selected_index()]
 
-    def set_selected_index(self, index: int):
+    def get_selected_value(self):
+        return self.get_selected_item()[0]
+
+    def get_checked_index(self):
+        for idx, value in enumerate(self.values):
+            if value[0] == self.current_value:
+                return idx
+        return -1
+
+    def get_checked_value(self):
+        return self.current_value
+
+    def get_checked_item(self):
+        return self.values[self.get_checked_index()]
+
+    def set_checked_index(self, index: int):
         self._selected_index = index
         self.current_value = self.values[self._selected_index][0]
+
+    def set_selected_index(self, index: int):
+        self._selected_index = index
 
     def add_enter_handle(self, enter_handler):
         self.handlers.append(enter_handler)
