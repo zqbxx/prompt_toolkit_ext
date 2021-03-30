@@ -1,5 +1,6 @@
 from typing import Sequence, Tuple, List
 import qrcode
+from axel import Event
 
 from prompt_toolkit.widgets import RadioList as _RadioList
 from prompt_toolkit.widgets.base import _T
@@ -16,6 +17,7 @@ class RadioList(_RadioList):
     def __init__(self, values: Sequence[Tuple[_T, AnyFormattedText]]) -> None:
         super().__init__(values)
         self.handlers = []
+        self.check_event = Event()
 
     def up(self) -> None:
         self._selected_index = max(0, self._selected_index - 1)
@@ -51,25 +53,15 @@ class RadioList(_RadioList):
     def set_selected_index(self, index: int):
         self._selected_index = index
 
-    def add_enter_handle(self, enter_handler):
-        self.handlers.append(enter_handler)
-
     def _handle_enter(self) -> None:
 
         old_value = None
         for value in self.values:
             if value[0] == self.current_value:
                 old_value = value
-
         new_value = self.values[self._selected_index]
-        for handler in self.handlers:
-            ret = handler('enter', old_value, new_value)
-            if not ret:
-                return
         super()._handle_enter()
-
-        for handler in self.handlers:
-            handler('selected', old_value, new_value)
+        self.check_event.fire(old_value, new_value)
 
 
 '''
