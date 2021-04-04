@@ -35,7 +35,7 @@ from prompt_toolkit.layout import (
     Layout,
     VSplit,
     Window,
-)
+    FloatContainer)
 from prompt_toolkit.layout.controls import UIContent, UIControl
 from prompt_toolkit.layout.dimension import AnyDimension, D
 from prompt_toolkit.output import ColorDepth, Output
@@ -150,6 +150,8 @@ class Progress:
             # complex to repeat here.
             self._previous_winch_handler = signal.getsignal(_SIGWINCH)
 
+        self.root = None
+
     def create_ui(self):
 
         self._create_app()
@@ -214,26 +216,30 @@ class Progress:
 
         body = self.create_content(progress_controls)
 
-        if self.key_bindings is None:
-            self.create_key_bindings()
-
-        self.app: Application[None] = Application(
-            min_redraw_interval=0.05,
-            layout=Layout(
-                HSplit(
+        self.root = FloatContainer(
+            content=HSplit(
                     [
                         title_toolbar,
                         body,
                         bottom_toolbar,
                     ]
-                )
-            ),
+                ),
+            floats=[]
+        )
+
+        if self.key_bindings is None:
+            self.create_key_bindings()
+
+        self.app: Application[None] = Application(
+            min_redraw_interval=0.05,
+            layout=Layout(self.root),
             style=self.style,
             key_bindings=self.key_bindings,
             refresh_interval=0.3,
             color_depth=self.color_depth,
             output=self.output,
             input=self.input,
+            full_screen=True,
         )
 
         return self.app
