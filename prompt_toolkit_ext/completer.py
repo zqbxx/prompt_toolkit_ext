@@ -53,7 +53,7 @@ class ArgParserCompleter(Completer):
             cur_parser = parser
             for i, arg in enumerate(args):
                 # 遍历命令行数组，找到最近一个parser
-                subparser = parser.get_subparser_by_command(arg, like=False)
+                subparser = PromptArgumentParser.get_subparser_by_command_(cur_parser, arg)
                 if subparser is not None:
                     cur_cmd_pos = i
                     cur_parser = subparser
