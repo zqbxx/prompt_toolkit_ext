@@ -1,11 +1,15 @@
 import argparse
 import sys
+from argparse import ArgumentParser, HelpFormatter
+from typing import Optional, Sequence, Type
 
 
 class PromptArgumentParser(argparse.ArgumentParser):
 
     def parse_args(self, args=None, namespace=None):
         ret = super(PromptArgumentParser, self).parse_args(args, namespace)
+        setattr(ret, 'prompt_args', args)
+        setattr(ret, 'prompt_mode', True)
         return ret
 
     def exit(self, status=0, message=None):
@@ -45,10 +49,13 @@ class PromptArgumentParser(argparse.ArgumentParser):
                         parser.clear_error_flag()
 
     def get_subparser_by_command(self, command, like=False):
+        return PromptArgumentParser.get_subparser_by_command_(self, command, like)
 
+    @staticmethod
+    def get_subparser_by_command_(parent: argparse.ArgumentParser, command, like=False):
         subparsers = {}
 
-        for sub_action in self._actions:
+        for sub_action in parent._actions:
             if isinstance(sub_action, argparse._SubParsersAction):
                 if like:
                     for c, p in sub_action._name_parser_map.items():
