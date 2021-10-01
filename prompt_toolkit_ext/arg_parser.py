@@ -103,3 +103,13 @@ class PromptArgumentParser(argparse.ArgumentParser):
                 parser_map = sub_action._name_parser_map
                 subparser_list.append(parser_map)
         return subparser_list
+
+    @staticmethod
+    def get_help(parent, name: str):
+        if len(parent._actions) <= 1 :
+            return ''
+        actions = parent._actions[1]._choices_actions
+        for action in actions:
+            if action.dest == name:
+                return action.help
+        return ''

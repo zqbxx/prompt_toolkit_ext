@@ -77,8 +77,24 @@ class ArgParserCompleter(Completer):
         if len(current_args) == 1:
             subparsers = current_parser.get_subparser_by_command(command, like=True)
             if subparsers is not None:
-                for c, _ in subparsers.items():
-                    yield Completion(c, -len(word_before_cursor), style='fg:blue', selected_style="fg:white bg:blue")
+                info_list: List[Dict[str, str]] = list()
+                max_text_width = 7
+                for c, a in subparsers.items():
+                    help_msg = ''
+                    if isinstance(a, PromptArgumentParser):
+                        help_msg = PromptArgumentParser.get_help(current_parser, c)
+                        if len(help_msg) > max_text_width:
+                            max_text_width = len(help_msg)
+                    info_dict = {
+                        'text': c,
+                        'help': help_msg
+                    }
+                    info_list.append(info_dict)
+                for info in info_list:
+                    display = fill_right(info['text'], max_text_width) + ' ' + info['help']
+                    yield Completion(info['text'], -len(word_before_cursor), display=display, style='fg:blue',
+                                     selected_style="fg:white bg:blue")
+
 
         # 检查上一次值，如果为参数则提示输入值
         cur_text = current_args[-1]
